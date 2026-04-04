@@ -172,21 +172,57 @@ def main():
     
     
     
-    # Compute means
-    print("\nComputing mean scores across all models...")
-    
+    # Compute means with z-score normalization (test-set method)
+    print("\nApplying test-set z-score normalization and computing means...")
+    print("  (Normalizing each model using statistics from our test set)")
+
+    # Z-score normalize each model's scores using TEST SET statistics
     pref_cols = list(all_pref_scores.keys())
-    all_pref_scores['preference_reward_mean'] = [
-        np.mean([all_pref_scores[col][i] for col in pref_cols])
-        for i in range(len(prompts))
-    ]
-    
     need_cols = list(all_need_scores.keys())
-    all_need_scores['need_aware_reward_mean'] = [
-        np.mean([all_need_scores[col][i] for col in need_cols])
+
+    normalized_pref_scores = {}
+    normalized_need_scores = {}
+
+    for pref_col, need_col in zip(pref_cols, need_cols):
+        model_name = pref_col.replace('preference_reward_', '')
+
+        # Combine both response types to compute test set statistics
+        combined_scores = all_pref_scores[pref_col] + all_need_scores[need_col]
+        test_mean = np.mean(combined_scores)
+        test_sd = np.std(combined_scores)
+
+        # Normalize with test statistics
+        normalized_pref_scores[pref_col] = [
+            (score - test_mean) / test_sd
+            for score in all_pref_scores[pref_col]
+        ]
+
+        normalized_need_scores[need_col] = [
+            (score - test_mean) / test_sd
+            for score in all_need_scores[need_col]
+        ]
+
+        print(f"    {model_name:25s} - Test mean: {test_mean:6.2f}, Test sd: {test_sd:5.2f}")
+
+    all_pref_scores['preference_reward_mean'] = [
+        np.mean([normalized_pref_scores[col][i] for col in pref_cols])
         for i in range(len(prompts))
     ]
-    
+
+    all_need_scores['need_aware_reward_mean'] = [
+        np.mean([normalized_need_scores[col][i] for col in need_cols])
+        for i in range(len(prompts))
+    ]
+
+    print("  ✓ Test-set z-score normalization applied")
+
+    # Store normalized scores in the dictionaries (replacing raw scores)
+    for col in pref_cols:
+        all_pref_scores[col] = normalized_pref_scores[col]
+
+    for col in need_cols:
+        all_need_scores[col] = normalized_need_scores[col]
+
     # Create DataFrames
     pref_scores_df = pd.DataFrame(all_pref_scores)
     need_scores_df = pd.DataFrame(all_need_scores)

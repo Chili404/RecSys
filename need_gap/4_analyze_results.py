@@ -1,6 +1,79 @@
 import pandas as pd
 from pathlib import Path
 import json
+import yaml
+import numpy as np
+
+def validate_and_fix_reward_models(df):
+    """
+    Validate reward model scores and remove failed models.
+
+    Checks for models that returned all zeros or all identical values (indicating failure),
+    then recalculates means using only valid models.
+    """
+    # Load config to get model list
+    config_path = Path(__file__).parent / "config.yaml"
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+
+    REWARD_MODELS = list(config['reward_models'].keys())
+
+    # Find valid models
+    valid_models = []
+    failed_models = []
+
+    for model in REWARD_MODELS:
+        pref_col = f'preference_reward_{model}'
+
+        # Check if all values are identical (model failed)
+        if pref_col in df.columns and df[pref_col].nunique() == 1:
+            failed_models.append(model)
+        else:
+            valid_models.append(model)
+
+    if len(failed_models) > 0:
+        print(f"\n⚠️  WARNING: {len(failed_models)} model(s) failed (all identical scores):")
+        for model in failed_models:
+            print(f"  - {model}")
+        print(f"\nRecalculating with {len(valid_models)} valid models only...")
+
+        # Recalculate simple mean
+        pref_cols = [f'preference_reward_{m}' for m in valid_models]
+        need_cols = [f'need_aware_reward_{m}' for m in valid_models]
+
+        df['preference_reward_mean'] = df[pref_cols].mean(axis=1)
+        df['need_aware_reward_mean'] = df[need_cols].mean(axis=1)
+        df['reward_gap'] = df['preference_reward_mean'] - df['need_aware_reward_mean']
+
+        # Recalculate persona-weighted if it exists
+        if 'person_weight' in df.columns:
+            pref_weighted = []
+            need_weighted = []
+
+            for idx, row in df.iterrows():
+                # Get persona weights for valid models only
+                person_weight_full = row['person_weight'][:8]
+                valid_indices = [i for i, m in enumerate(REWARD_MODELS) if m in valid_models]
+                person_weight = person_weight_full[valid_indices]
+
+                # Renormalize to sum to 1
+                person_weight = person_weight / person_weight.sum()
+
+                # Get scores
+                pref_scores = [row[f'preference_reward_{m}'] for m in valid_models]
+                need_scores = [row[f'need_aware_reward_{m}'] for m in valid_models]
+
+                # Weighted sum
+                pref_weighted.append(np.dot(person_weight, pref_scores))
+                need_weighted.append(np.dot(person_weight, need_scores))
+
+            df['preference_reward_persona_weighted'] = pref_weighted
+            df['need_aware_reward_persona_weighted'] = need_weighted
+            df['reward_gap_persona_weighted'] = df['preference_reward_persona_weighted'] - df['need_aware_reward_persona_weighted']
+
+        print(f"✓ Recalculated using {len(valid_models)} models: {', '.join(valid_models)}\n")
+
+    return df
 
 def load_scored_responses():
     """Load scored responses DataFrame"""
@@ -10,10 +83,12 @@ def load_scored_responses():
     if fully_scored_path.exists():
         df = pd.read_parquet(fully_scored_path)
         print(f"Loaded {len(df)} fully scored responses (with S_need)")
+        df = validate_and_fix_reward_models(df)
         return df
     elif scored_path.exists():
         df = pd.read_parquet(scored_path)
         print(f"Loaded {len(df)} scored responses (without S_need)")
+        df = validate_and_fix_reward_models(df)
         return df
     else:
         print("ERROR: No scored responses found")
@@ -83,7 +158,7 @@ def generate_table_2(df):
 
     table_2_df = pd.DataFrame(table_2_data)
 
-    print(f"\nBreakdown:")
+    print("\nBreakdown:")
     print(f"  Divergent cases: {len(divergent_df)}")
     print(f"  Non-divergent cases: {len(non_divergent_df)}")
     print(f"  Total: {len(df)}\n")

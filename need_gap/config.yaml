@@ -33,31 +33,49 @@ gpt4o_temperature: 0.7
 gpt4o_max_tokens: 1000
 
 # PersonalLLM reward models (8 models actually used in Step 3)
+# Note: We use TEST-SET normalization (statistics computed from our 985 test responses)
+# The mean/sd below are PersonalLLM's training stats (kept for reference but not used)
 reward_models:
   llama3_sfairx:
     tokenizer_name: "sfairXC/FsfairX-LLaMA3-RM-v0.1"
     model_name: "sfairXC/FsfairX-LLaMA3-RM-v0.1"
+    mean: 1.0638
+    sd: 2.9530
   mistral_weqweasdas:
     tokenizer_name: "weqweasdas/RM-Mistral-7B"
     model_name: "weqweasdas/RM-Mistral-7B"
+    mean: 7.0711
+    sd: 2.5786
   mistral_ray:
     tokenizer_name: "Ray2333/reward-model-Mistral-7B-instruct-Unified-Feedback"
     model_name: "Ray2333/reward-model-Mistral-7B-instruct-Unified-Feedback"
+    mean: 3.0137
+    sd: 1.6901
   gemma_7b:
     tokenizer_name: "weqweasdas/RM-Gemma-7B"
     model_name: "weqweasdas/RM-Gemma-7B"
+    mean: 1.6261
+    sd: 2.6099
   mistral_raft:
     tokenizer_name: "mistralai/Mistral-7B-Instruct-v0.2"
     model_name: "hendrydong/Mistral-RM-for-RAFT-GSHF-v0"
+    mean: 8.3093
+    sd: 3.0731
   oasst_deberta_v3:
     tokenizer_name: "OpenAssistant/reward-model-deberta-v3-large-v2"
     model_name: "OpenAssistant/reward-model-deberta-v3-large-v2"
+    mean: 2.8979
+    sd: 1.7210
   oasst_pythia_1b:
     tokenizer_name: "OpenAssistant/oasst-rm-2.1-pythia-1.4b-epoch-2.5"
     model_name: "OpenAssistant/oasst-rm-2.1-pythia-1.4b-epoch-2.5"
+    mean: 4.2943
+    sd: 2.3018
   beaver_7b:
     tokenizer_name: "PKU-Alignment/beaver-7b-v1.0-cost"
     model_name: "PKU-Alignment/beaver-7b-v1.0-cost"
+    mean: 6.2337
+    sd: 3.0127
 
 # Scoring configuration (from PersonalLLM eval)
 scoring:
