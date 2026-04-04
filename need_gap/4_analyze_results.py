@@ -222,11 +222,11 @@ def generate_table_4(df):
         examples.append({
             'divergence_type': div_type,
             'prompt': example['test_prompt'],
-            'preference_matched_response': example['preference_matched_response'][:300] + "...",
-            'need_aware_response': example['need_aware_response'][:300] + "...",
+            'preference_matched_response': example['preference_matched_response'],
+            'need_aware_response': example['need_aware_response'],
             'preference_reward': example['preference_reward_mean'],
             'need_aware_reward': example['need_aware_reward_mean'],
-            'need_aware_analysis': example['need_aware_analysis'][:200] + "..."
+            'need_aware_analysis': example['need_aware_analysis']
         })
 
     examples_path = Path(__file__).parent / "results" / "qualitative_examples.json"
@@ -242,6 +242,93 @@ def generate_table_4(df):
         print(f"Prompt: {ex['prompt'][:150]}...")
         print(f"Preference reward: {ex['preference_reward']:.3f}")
         print(f"Need-aware reward: {ex['need_aware_reward']:.3f}")
+
+    return examples
+
+def generate_top_discrepancies(df, top_n_per_category=3):
+    """
+    Generate top N cases per divergence category where R_pref and S_need most disagree.
+
+    Discrepancy = cases where reward models prefer one response but
+    need-alignment judge prefers the other.
+    """
+    print("\n" + "="*80)
+    print(f"Top {top_n_per_category} Discrepancies per Divergence Type (R_pref vs S_need)")
+    print("="*80)
+
+    # Check if S_need scores are available
+    has_s_need = 'pref_s_need' in df.columns and 'need_s_need' in df.columns
+
+    if not has_s_need:
+        print("S_need scores not available. Run step 5 first.")
+        return []
+
+    # Calculate discrepancy
+    # Positive reward_gap = pref wins on rewards
+    # Positive s_need_gap = need wins on alignment
+    # High discrepancy = opposite directions or large magnitude difference
+    df['reward_gap_normalized'] = (df['preference_reward_mean'] - df['need_aware_reward_mean'])
+    df['s_need_gap'] = (df['need_s_need'] - df['pref_s_need'])
+
+    # Discrepancy metric: where they disagree most
+    # reward_gap is always positive (pref wins), s_need_gap can be positive or negative
+    # We want cases where s_need_gap is large and positive (need wins) despite reward gap
+    df['discrepancy'] = df['s_need_gap'] - (df['reward_gap_normalized'] / df['reward_gap_normalized'].abs().max())
+
+    # Get top N per divergence type
+    all_examples = []
+    for div_type in sorted(df['divergence_type'].unique()):
+        subset = df[df['divergence_type'] == div_type]
+        top_for_type = subset.nlargest(top_n_per_category, 'discrepancy')
+
+        for idx, row in top_for_type.iterrows():
+            all_examples.append({
+                'prompt': row['test_prompt'],
+                'divergence_type': row['divergence_type'],
+                'person_id': row['person_id'],
+
+                # Full responses
+                'preference_matched_response': row['preference_matched_response'],
+                'need_aware_response': row['need_aware_response'],
+                'need_aware_analysis': row['need_aware_analysis'],
+
+                # R_pref scores
+                'preference_matched_rpref': float(row['preference_reward_mean']),
+                'need_aware_rpref': float(row['need_aware_reward_mean']),
+                'rpref_gap': float(row['reward_gap']),
+
+                # S_need scores
+                'preference_matched_sneed': float(row['pref_s_need']),
+                'need_aware_sneed': float(row['need_s_need']),
+                'sneed_gap': float(row['s_need_gap']),
+
+                # Discrepancy metric
+                'discrepancy_score': float(row['discrepancy'])
+            })
+
+    examples = all_examples
+
+    # Save to JSON
+    discrepancy_path = Path(__file__).parent / "results" / "top_discrepancies.json"
+    discrepancy_path.parent.mkdir(exist_ok=True)
+
+    with open(discrepancy_path, 'w') as f:
+        json.dump(examples, f, indent=2)
+
+    print(f"\nSaved top {top_n_per_category} discrepancies per category ({len(examples)} total) to: {discrepancy_path}")
+    print("\nBreakdown by divergence type:")
+    from collections import Counter
+    type_counts = Counter(ex['divergence_type'] for ex in examples)
+    for dtype, count in sorted(type_counts.items()):
+        print(f"  {dtype}: {count} cases")
+
+    print("\nSample preview (first 3):")
+    for i, ex in enumerate(examples[:3]):
+        print(f"\n{i+1}. {ex['divergence_type']}")
+        print(f"   R_pref gap: {ex['rpref_gap']:+.3f} (pref wins)")
+        print(f"   S_need gap: {ex['sneed_gap']:+.3f} (need wins)" if ex['sneed_gap'] > 0 else f"   S_need gap: {ex['sneed_gap']:+.3f} (pref wins)")
+        print(f"   Discrepancy: {ex['discrepancy_score']:.3f}")
+        print(f"   Prompt: {ex['prompt'][:100]}...")
 
     return examples
 
@@ -296,6 +383,10 @@ def main():
     # Generate tables
     table_2_df = generate_table_2(df)
     table_3_df = generate_table_3(df)
+
+    # Generate top discrepancies (R_pref vs S_need mismatches)
+    # Get top 3 cases per divergence type
+    generate_top_discrepancies(df, top_n_per_category=3)
 
     # Save tables
     results_dir = Path(__file__).parent / "results"

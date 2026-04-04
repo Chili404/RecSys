@@ -218,11 +218,10 @@ async def score_need_alignment_async(config, max_concurrent=20):
     df.to_parquet(output_path, index=False)
     print(f"\n\nSaved fully scored responses to: {output_path}")
 
-    # Also save as JSON
+    # Also save as JSON (full dataset with all responses)
     json_path = output_path.with_suffix('.json')
-    # Only save first 10 for size reasons
-    df.head(10).to_json(json_path, orient='records', indent=2)
-    print(f"Also saved sample (10 rows) as JSON: {json_path}")
+    df.to_json(json_path, orient='records', indent=2)
+    print(f"Also saved as JSON: {json_path}")
 
     return df
 
