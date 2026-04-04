@@ -23,41 +23,48 @@ def load_scored_responses():
 def generate_table_2(df):
     """
     Generate Table 2: Preference reward vs. need-alignment on PersonalLLM benchmark.
+
+    Shows all 4 combinations:
+    - Divergent + Preference-matched
+    - Divergent + Need-aware
+    - Non-divergent + Preference-matched
+    - Non-divergent + Need-aware
     """
     print("\n" + "="*80)
     print("Table 2: Preference Reward vs. Need-Alignment")
     print("="*80)
 
-    # Separate divergent and non-divergent cases
-    # For now, all our filtered prompts are divergent (confidence >= 0.7)
-    # We'd need to add non-divergent controls for a complete analysis
-    divergent_df = df[df['confidence'] >= 0.7]
-    non_divergent_df = df[df['confidence'] < 0.7] if len(df[df['confidence'] < 0.7]) > 0 else None
+    # Properly separate divergent and non-divergent cases
+    # Divergent: divergence_type != 'none'
+    # Non-divergent: divergence_type == 'none'
+    divergent_df = df[df['divergence_type'] != 'none']
+    non_divergent_df = df[df['divergence_type'] == 'none']
+
+    # Check if S_need scores are available
+    has_s_need = 'pref_s_need' in df.columns and 'need_s_need' in df.columns
 
     table_2_data = []
 
     # Divergent cases
-    # Check if S_need scores are available
-    has_s_need = 'pref_s_need' in divergent_df.columns and 'need_s_need' in divergent_df.columns
+    if len(divergent_df) > 0:
+        table_2_data.append({
+            'Subset': 'Divergent',
+            'Response Type': 'Preference-matched',
+            'R_pref': divergent_df['preference_reward_mean'].mean(),
+            'S_need': divergent_df['pref_s_need'].mean() if has_s_need else 'TBD',
+            'n': len(divergent_df)
+        })
 
-    table_2_data.append({
-        'Subset': 'Divergent',
-        'Response Type': 'Preference-matched',
-        'R_pref': divergent_df['preference_reward_mean'].mean(),
-        'S_need': divergent_df['pref_s_need'].mean() if has_s_need else 'TBD',
-        'n': len(divergent_df)
-    })
+        table_2_data.append({
+            'Subset': 'Divergent',
+            'Response Type': 'Need-aware',
+            'R_pref': divergent_df['need_aware_reward_mean'].mean(),
+            'S_need': divergent_df['need_s_need'].mean() if has_s_need else 'TBD',
+            'n': len(divergent_df)
+        })
 
-    table_2_data.append({
-        'Subset': 'Divergent',
-        'Response Type': 'Need-aware',
-        'R_pref': divergent_df['need_aware_reward_mean'].mean(),
-        'S_need': divergent_df['need_s_need'].mean() if has_s_need else 'TBD',
-        'n': len(divergent_df)
-    })
-
-    # Non-divergent cases (if available)
-    if non_divergent_df is not None and len(non_divergent_df) > 0:
+    # Non-divergent cases
+    if len(non_divergent_df) > 0:
         table_2_data.append({
             'Subset': 'Non-divergent',
             'Response Type': 'Preference-matched',
@@ -75,6 +82,12 @@ def generate_table_2(df):
         })
 
     table_2_df = pd.DataFrame(table_2_data)
+
+    print(f"\nBreakdown:")
+    print(f"  Divergent cases: {len(divergent_df)}")
+    print(f"  Non-divergent cases: {len(non_divergent_df)}")
+    print(f"  Total: {len(df)}\n")
+
     print(table_2_df.to_string(index=False))
 
     return table_2_df
@@ -194,26 +207,6 @@ def generate_statistics_summary(df):
         mean_gap = subset['reward_gap'].mean()
         print(f"  {div_type}: {mean_gap:+.4f} (n={len(subset)})")
 
-def save_latex_tables(table_2_df, table_3_df):
-    """Save tables in LaTeX format for paper"""
-    output_dir = Path(__file__).parent / "results"
-    output_dir.mkdir(exist_ok=True)
-
-    # Table 2 LaTeX
-    latex_path_2 = output_dir / "table_2.tex"
-    with open(latex_path_2, 'w') as f:
-        f.write("% Table 2: Preference Reward vs. Need-Alignment\n")
-        f.write(table_2_df.to_latex(index=False, float_format="%.4f"))
-
-    print(f"\nSaved Table 2 (LaTeX) to: {latex_path_2}")
-
-    # Table 3 LaTeX
-    latex_path_3 = output_dir / "table_3.tex"
-    with open(latex_path_3, 'w') as f:
-        f.write("% Table 3: Need-Alignment Gap by Divergence Type\n")
-        f.write(table_3_df.to_latex(index=False, float_format="%.4f"))
-
-    print(f"Saved Table 3 (LaTeX) to: {latex_path_3}")
 
 def main():
     """Main analysis pipeline"""
@@ -237,9 +230,6 @@ def main():
     table_3_df.to_csv(results_dir / "table_3.csv", index=False)
 
     print(f"\nSaved CSV tables to: {results_dir}")
-
-    # Save LaTeX versions
-    save_latex_tables(table_2_df, table_3_df)
 
     print("\n" + "="*80)
     print("Analysis complete!")

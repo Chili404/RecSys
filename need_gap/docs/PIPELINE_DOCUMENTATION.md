@@ -252,13 +252,15 @@ Generate statistical summaries and tables for the paper/report.
 - Reward gap analysis by divergence type
 
 #### 2. Table 2: Preference Reward vs. Need-Alignment
-Compares two metrics across response types:
+Shows all 4 combinations:
+- Divergent + Preference-matched
+- Divergent + Need-aware
+- Non-divergent + Preference-matched
+- Non-divergent + Need-aware
+
+Compares two metrics:
 - **R_pref:** Preference reward (from reward models)
 - **S_need:** Need-alignment score (from GPT-4o judge - added in Step 5)
-
-Breakdown by:
-- Divergent cases (confidence ≥ 0.7)
-- Non-divergent controls (confidence < 0.7)
 
 #### 3. Table 3: Need-Alignment Gap by Divergence Type
 Shows the delta (Δ) between need-aware and preference-matched:
@@ -279,8 +281,8 @@ Selection method: Chooses example with largest absolute reward gap.
 ### Output Files
 
 **Results directory:** `results/`
-- `table_2.csv` / `table_2.tex`: Preference vs need-alignment comparison
-- `table_3.csv` / `table_3.tex`: Gap analysis by type
+- `table_2.csv`: Preference vs need-alignment comparison
+- `table_3.csv`: Gap analysis by type
 - `qualitative_examples.json`: Selected example prompts and responses
 
 **Note:** Initially, S_need scores show as "TBD" until Step 5 is run.
@@ -403,8 +405,8 @@ This updates Table 2 and Table 3 with complete metrics including need-alignment 
 - `fully_scored_responses.parquet` - Result of Step 5 (with S_need scores)
 
 ### Results (`results/` directory)
-- `table_2.csv`, `table_2.tex` - Preference vs need-alignment comparison
-- `table_3.csv`, `table_3.tex` - Gap analysis by divergence type
+- `table_2.csv` - Preference vs need-alignment comparison (4 combinations)
+- `table_3.csv` - Gap analysis by divergence type
 - `qualitative_examples.json` - Sample prompts and responses
 
 ### Prompts (`prompts/` directory)
@@ -424,10 +426,8 @@ This table compares two key metrics across both response types, separating truly
 |--------|---------------|---------------------------|------------------------|---|
 | **Divergent** | Preference-matched | 4.047 | 0.882 | 501 |
 | **Divergent** | Need-aware | 0.288 | 0.964 | 501 |
-| **Control (None)** | Preference-matched | 4.106 | 0.994 | 484 |
-| **Control (None)** | Need-aware | 0.612 | 0.991 | 484 |
-| **All Prompts** | Preference-matched | 4.076 | 0.937 | 985 |
-| **All Prompts** | Need-aware | 0.447 | 0.977 | 985 |
+| **Non-divergent** | Preference-matched | 4.106 | 0.994 | 484 |
+| **Non-divergent** | Need-aware | 0.612 | 0.991 | 484 |
 
 **Divergent cases composition (501 total):**
 - Underspecified Intent: 412 (82.2%)
