@@ -8,6 +8,7 @@ build/
 develop-eggs/
 dist/
 *.egg-info/
+.env
 
 # --- Lockfiles ---
 # NOTE: Commit uv.lock to version control for reproducible builds.
