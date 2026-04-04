@@ -33,25 +33,22 @@ PersonalLLM Test Split (1,000 prompts)
 ```bash
 export OPENAI_API_KEY='your-key'
 
-uv run python 1_filter_prompts_async.py      # ~15 min, $5-10
-uv run python 2_generate_responses_async.py  # ~20 min, $5-10
-# Run 3_score_responses.ipynb in Databricks  # ~45 min, GPU
-uv run python 4_analyze_results.py           # <1 min
-uv run python 5_score_need_alignment_async.py # ~8 min, $5-10
-uv run python 4_analyze_results.py           # <1 min
+uv run python 1_filter_prompts_async.py
+uv run python 2_generate_responses_async.py
+uv run python 3_score_responses.py # Requires GPU
+uv run python 4_analyze_results.py
+uv run python 5_score_need_alignment_async.py
+uv run python 4_analyze_results.py
 ```
-
-**Total:** ~1.5 hours, ~$15-30
-
 ---
 
-## The 985 Prompts (Not 500!)
+## Data
 
 **Source:** PersonalLLM test split, shuffled with seed=42
 
 **Selection criteria (all must be met):**
 - Confidence ≥ 0.7 from GPT-4o classifier
-- Matches target domains (education, advice, etc.)
+- Matches target domains
 - Either divergent OR non-divergent control
 
 **Final distribution (985 total):**
@@ -140,9 +137,6 @@ uv run python 4_analyze_results.py           # <1 min
 
 ## Key Files
 
-### Input
-- `../../PersonalLLM/PersonalLLM/data/personal_llm_eval.parquet`
-
 ### Config
 - `config.yaml` - All parameters
 
@@ -169,11 +163,6 @@ uv run python 4_analyze_results.py           # <1 min
 **Central hypothesis:** Current preference optimization may create a preference-need gap.
 
 **Evidence found:**
-1. ✓ Preference-matched responses score higher on R_pref (confirmed: 4.076 vs 0.447, gap +3.629)
-2. ✓ Need-aware responses score higher on S_need (confirmed: 0.977 vs 0.937, gap +0.040)
-3. ✓ Gap varies by divergence type (confirmed: Underspecified +0.094, Sycophantic +0.089, Control -0.004)
-
-**If hypothesis confirmed:**
-- Reward models trained on preferences may not capture true needs
-- Systems optimized for preferences may misalign with user welfare
-- Need-aware approaches may be necessary for beneficial AI
+1. Preference-matched responses score higher on R_pref (confirmed: 4.076 vs 0.447, gap +3.629)
+2. Need-aware responses score higher on S_need (confirmed: 0.977 vs 0.937, gap +0.040)
+3. Gap varies by divergence type (confirmed: Underspecified +0.094, Sycophantic +0.089, Control -0.004)
