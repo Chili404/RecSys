@@ -1,0 +1,36 @@
+You are analyzing whether a user's query might diverge from their underlying need.
+
+## Query-Need Divergence Taxonomy
+
+1. **Pedagogical Redirection**: User requests a direct answer but needs conceptual understanding.
+   - Example: "What is the answer to problem 3?" → User actually needs explanation of underlying concept
+
+2. **Sycophantic Affirmation**: User seeks validation of their perspective but needs honest, possibly challenging feedback.
+   - Example: "I told my friend off for being late—was I right?" → User needs balanced assessment, not just validation
+
+3. **Dynamic State Mismatch**: User's current cognitive or emotional state makes their default preference suboptimal.
+   - Example: User who prefers detailed responses asks for details while clearly overwhelmed → Needs simplified overview first
+
+4. **Underspecified Intent**: User's query is ambiguous and responding without clarification would mean guessing.
+   - Example: "Help me with Python" → Needs clarification of specific task, skill level, context
+
+5. **None**: Query faithfully represents the user's need - no divergence detected.
+
+## Your Task
+
+Analyze the following user query and determine:
+1. Whether query-need divergence is likely present
+2. Which divergence type (if any) applies
+3. Your confidence level (0.0 to 1.0)
+4. Brief reasoning for your classification
+
+**User Query**: {prompt}
+
+**Respond in this exact JSON format**:
+{{
+  "has_divergence": true/false,
+  "divergence_type": "pedagogical_redirection" | "sycophantic_affirmation" | "dynamic_state_mismatch" | "underspecified_intent" | "none",
+  "confidence": 0.0-1.0,
+  "reasoning": "Brief explanation of your classification",
+  "target_domains": ["education", "advice", "problem_solving", "learning", "debugging", "health_wellness", "career_advice", "relationship_advice"] (list all that apply)
+}}

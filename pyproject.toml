@@ -1,0 +1,18 @@
+[project]
+name = "recsys"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0.0",
+    "pyarrow>=10.0.0",
+    "pyyaml>=6.0",
+    "openai>=1.0.0",
+    "tqdm>=4.65.0",
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "datasets>=2.10.0",
+    "huggingface-hub[hf-xet]>=1.9.0",
+    "python-dotenv>=1.2.2",
+]

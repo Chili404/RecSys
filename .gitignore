@@ -1,0 +1,24 @@
+# --- uv & Python ---
+.venv/
+__pycache__/
+*.py[cod]
+
+# --- Build & Distribution ---
+build/
+develop-eggs/
+dist/
+*.egg-info/
+
+# --- Lockfiles ---
+# NOTE: Commit uv.lock to version control for reproducible builds.
+uv.lock
+
+# --- IDE & System ---
+.idea/
+.vscode/
+.DS_Store
+
+# --- Testing ---
+.tox/
+.coverage
+.pytest_cache/
