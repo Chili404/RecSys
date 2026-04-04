@@ -27,7 +27,7 @@ The pipeline consists of 5 sequential steps:
 ```bash
 uv run python 1_filter_prompts_async.py
 uv run python 2_generate_responses_async.py
-# Step 3 is a Jupyter notebook (run in Databricks)
+uv run python 3_score_responses.py
 uv run python 4_analyze_results.py
 uv run python 5_score_need_alignment_async.py
 ```
@@ -46,32 +46,6 @@ Identify prompts from the PersonalLLM dataset that exhibit query-need divergence
   - **Origin:** Derived from PersonalLLM test split (held-out data, no train contamination)
   - **Size:** 1,000 synthetic personas with interaction history
   - **Location:** `namkoong-lab/PersonalLLM_Eval`
-
-**Why Only Test Split (PersonalLLM_Eval)?**
-
-The pipeline uses PersonalLLM_Eval instead of combining test and train splits for several critical reasons:
-
-1. **Structural Compatibility:**
-   - PersonalLLM_Eval: 29 columns with user history structure (prompt_1/2/3, chosen_1/2/3, test_prompt)
-   - PersonalLLM_Test/Train: 100 columns with different structure, no user history
-   - Eval dataset is specifically formatted for this type of analysis
-
-2. **Avoid Train Contamination:**
-   - PersonalLLM_Eval is derived from the test split (held-out data)
-   - Using train data would risk contamination since reward models may have seen it
-   - Test data ensures clean evaluation
-
-3. **Pre-computed Preference-Matched Responses:**
-   - Eval dataset includes `best_response` (preference-matched) pre-computed
-   - Includes `best_response_model` and `best_response_reward`
-   - Train data would require running all 8 reward models to compute these
-
-4. **Appropriate Sample Size:**
-   - 1,000 personas → 985 qualifying prompts after filtering (confidence ≥0.7, target domains)
-   - 501 divergent + 484 control provides good statistical power
-   - PersonalLLM_Train has 9,402 rows but wrong structure for this analysis
-
-**Could train data be used?** Only if it were reformatted to match PersonalLLM_Eval's structure with user histories and preference-matched responses pre-computed. The raw train split is incompatible with this pipeline.
 
 ### Classification Process
 
@@ -200,7 +174,7 @@ Score both response types using the same 8 reward models used in PersonalLLM to 
 
 ### Scoring Method
 
-**CRITICAL:** Uses PersonalLLM's exact inference method for comparable results:
+Uses PersonalLLM's exact inference method for comparable results:
 
 1. **Prompt Format:**
    ```
