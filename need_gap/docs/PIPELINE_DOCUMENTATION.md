@@ -390,42 +390,6 @@ uv run python 4_analyze_results.py
 This updates Table 2 and Table 3 with complete metrics including need-alignment scores.
 
 ---
-
-## Configuration
-
-**File:** `config.yaml`
-
-### Key Parameters
-
-```yaml
-num_prompts: 10000  # Process all available (will stop when exhausted)
-divergence_confidence_threshold: 0.7  # Minimum confidence for inclusion
-
-# Target domains for filtering
-target_domains:
-  - education
-  - advice
-  - problem_solving
-  - learning
-  - debugging
-  - health_wellness
-  - career_advice
-  - relationship_advice
-
-# GPT-4o settings
-gpt4o_model: "gpt-4o"
-gpt4o_temperature: 0.7
-gpt4o_max_tokens: 1000
-
-# Reward model scoring
-scoring:
-  batch_size: 8
-  max_length: 2048
-  gpus: [0]
-```
-
----
-
 ## Data Files Summary
 
 ### Input Data
