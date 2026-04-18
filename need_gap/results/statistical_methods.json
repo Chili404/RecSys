@@ -1,0 +1,32 @@
+{
+  "column_definitions": {
+    "_p columns (R_pref_p, S_need_p, \u0394R_pref_p, \u0394S_need_p)": {
+      "test": "Wilcoxon signed-rank test (paired, two-sided)",
+      "correction": "Benjamini-Hochberg FDR correction applied across all p-values within each table"
+    },
+    "_d columns (R_pref_d, S_need_d, \u0394R_pref_d, \u0394S_need_d)": {
+      "test": "Cohen's d_z for paired data",
+      "formula": "mean(diff) / std(diff)"
+    },
+    "_CI columns (R_pref_CI, S_need_CI, \u0394R_pref_CI, \u0394S_need_CI)": {
+      "method": "Percentile bootstrap",
+      "n_resamples": 10000,
+      "confidence_level": 0.95,
+      "clustering": "Resampled at person_id level (clustered bootstrap)",
+      "seed": 42
+    }
+  },
+  "data": {
+    "n_total": 1374,
+    "n_divergent": 894,
+    "n_non_divergent": 480,
+    "divergence_types": {
+      "none": 480,
+      "underspecified_intent": 413,
+      "pedagogical_redirection": 250,
+      "sycophantic_affirmation": 128,
+      "dynamic_state_mismatch": 103
+    },
+    "n_unique_persons": 1374
+  }
+}

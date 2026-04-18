@@ -3,6 +3,72 @@ from pathlib import Path
 import json
 import yaml
 import numpy as np
+from scipy.stats import wilcoxon
+
+
+def clustered_bootstrap_ci(data, clusters, n_resamples=10000, ci=0.95, seed=42):
+    """
+    Compute percentile bootstrap CI for the mean, resampling at the cluster level.
+
+    Resamples unique cluster IDs with replacement, then gathers all observations
+    belonging to each sampled cluster. When each cluster has 1 observation,
+    this is equivalent to a standard bootstrap.
+    """
+    rng = np.random.default_rng(seed)
+    data = np.asarray(data)
+    clusters = np.asarray(clusters)
+
+    unique_clusters = np.unique(clusters)
+    n_clusters = len(unique_clusters)
+
+    # Build a mapping from cluster ID to row indices
+    cluster_to_idx = {}
+    for i, c in enumerate(clusters):
+        cluster_to_idx.setdefault(c, []).append(i)
+
+    boot_means = np.empty(n_resamples)
+    for b in range(n_resamples):
+        sampled_clusters = unique_clusters[rng.integers(0, n_clusters, size=n_clusters)]
+        indices = []
+        for c in sampled_clusters:
+            indices.extend(cluster_to_idx[c])
+        boot_means[b] = data[indices].mean()
+
+    alpha = (1 - ci) / 2
+    lower = np.percentile(boot_means, 100 * alpha)
+    upper = np.percentile(boot_means, 100 * (1 - alpha))
+    return lower, upper
+
+
+def cohens_d_paired(x, y):
+    """Compute Cohen's d_z for paired data: mean(diff) / std(diff)."""
+    diff = np.asarray(x) - np.asarray(y)
+    if diff.std() == 0:
+        return 0.0
+    return diff.mean() / diff.std()
+
+
+def benjamini_hochberg(p_values):
+    """
+    Apply Benjamini-Hochberg FDR correction to a list of p-values.
+
+    Returns adjusted p-values (q-values) in the same order as the input.
+    """
+    p = np.asarray(p_values, dtype=float)
+    n = len(p)
+    sorted_idx = np.argsort(p)
+    sorted_p = p[sorted_idx]
+
+    # BH adjusted: p_adj[i] = min(p[i] * n / rank, 1.0), enforced to be monotone
+    adjusted = np.minimum(sorted_p * n / np.arange(1, n + 1), 1.0)
+    # Enforce monotonicity (from right to left)
+    for i in range(n - 2, -1, -1):
+        adjusted[i] = min(adjusted[i], adjusted[i + 1])
+
+    # Put back in original order
+    result = np.empty(n)
+    result[sorted_idx] = adjusted
+    return result
 
 def validate_and_fix_reward_models(df):
     """
@@ -89,66 +155,119 @@ def load_scored_responses():
         print("Please run 4_score_need_alignment_async.py first!")
         return None
 
+def _build_table_2_rows(subset_df, subset_name, has_s_need):
+    """Build Table 2 rows for a given subset with clustered bootstrap CIs, Wilcoxon p-values, and Cohen's d."""
+    pref_rpref = subset_df['preference_reward_mean'].values
+    need_rpref = subset_df['need_aware_reward_mean'].values
+    clusters = subset_df['person_id'].values
+
+    # Clustered bootstrap CIs for R_pref means
+    pref_rpref_ci = clustered_bootstrap_ci(pref_rpref, clusters)
+    need_rpref_ci = clustered_bootstrap_ci(need_rpref, clusters)
+
+    # Wilcoxon signed-rank test for R_pref
+    _, rpref_p = wilcoxon(pref_rpref, need_rpref)
+    rpref_d = cohens_d_paired(pref_rpref, need_rpref)
+
+    # Store raw p-values for later BH correction
+    raw_p_values = [rpref_p]
+
+    pref_row = {
+        'Subset': subset_name,
+        'Response Type': 'Preference-matched',
+        'R_pref': pref_rpref.mean(),
+        'R_pref_CI': f"({pref_rpref_ci[0]:.4f}, {pref_rpref_ci[1]:.4f})",
+        'n': len(subset_df),
+        'R_pref_p': rpref_p,
+        'R_pref_d': rpref_d,
+    }
+
+    need_row = {
+        'Subset': subset_name,
+        'Response Type': 'Need-aware',
+        'R_pref': need_rpref.mean(),
+        'R_pref_CI': f"({need_rpref_ci[0]:.4f}, {need_rpref_ci[1]:.4f})",
+        'n': len(subset_df),
+        'R_pref_p': '',
+        'R_pref_d': '',
+    }
+
+    if has_s_need:
+        pref_sneed = subset_df['pref_s_need'].values
+        need_sneed = subset_df['need_s_need'].values
+
+        pref_sneed_ci = clustered_bootstrap_ci(pref_sneed, clusters)
+        need_sneed_ci = clustered_bootstrap_ci(need_sneed, clusters)
+
+        _, sneed_p = wilcoxon(pref_sneed, need_sneed)
+        sneed_d = cohens_d_paired(pref_sneed, need_sneed)
+
+        raw_p_values.append(sneed_p)
+
+        pref_row['S_need'] = pref_sneed.mean()
+        pref_row['S_need_CI'] = f"({pref_sneed_ci[0]:.4f}, {pref_sneed_ci[1]:.4f})"
+        pref_row['S_need_p'] = sneed_p
+        pref_row['S_need_d'] = sneed_d
+
+        need_row['S_need'] = need_sneed.mean()
+        need_row['S_need_CI'] = f"({need_sneed_ci[0]:.4f}, {need_sneed_ci[1]:.4f})"
+        need_row['S_need_p'] = ''
+        need_row['S_need_d'] = ''
+    else:
+        pref_row['S_need'] = 'TBD'
+        pref_row['S_need_CI'] = ''
+        pref_row['S_need_p'] = ''
+        pref_row['S_need_d'] = ''
+        need_row['S_need'] = 'TBD'
+        need_row['S_need_CI'] = ''
+        need_row['S_need_p'] = ''
+        need_row['S_need_d'] = ''
+
+    return pref_row, need_row, raw_p_values
+
+
 def generate_table_2(df):
     """
     Generate Table 2: Preference reward vs. need-alignment on PersonalLLM benchmark.
 
-    Shows all 4 combinations:
-    - Divergent + Preference-matched
-    - Divergent + Need-aware
-    - Non-divergent + Preference-matched
-    - Non-divergent + Need-aware
+    Shows all 4 combinations with Wilcoxon p-values (BH-corrected), clustered bootstrap
+    95% CIs, and Cohen's d.
     """
     print("\n" + "="*80)
     print("Table 2: Preference Reward vs. Need-Alignment")
     print("="*80)
 
-    # Properly separate divergent and non-divergent cases
-    # Divergent: divergence_type != 'none'
-    # Non-divergent: divergence_type == 'none'
     divergent_df = df[df['divergence_type'] != 'none']
     non_divergent_df = df[df['divergence_type'] == 'none']
-
-    # Check if S_need scores are available
     has_s_need = 'pref_s_need' in df.columns and 'need_s_need' in df.columns
 
     table_2_data = []
+    all_raw_p = []
+    # Track which rows and columns hold p-values for later replacement
+    p_locations = []  # (row_index, column_name)
 
-    # Divergent cases
     if len(divergent_df) > 0:
-        table_2_data.append({
-            'Subset': 'Divergent',
-            'Response Type': 'Preference-matched',
-            'R_pref': divergent_df['preference_reward_mean'].mean(),
-            'S_need': divergent_df['pref_s_need'].mean() if has_s_need else 'TBD',
-            'n': len(divergent_df)
-        })
+        pref_row, need_row, raw_ps = _build_table_2_rows(divergent_df, 'Divergent', has_s_need)
+        row_idx = len(table_2_data)
+        table_2_data.extend([pref_row, need_row])
+        all_raw_p.extend(raw_ps)
+        p_locations.append((row_idx, 'R_pref_p'))
+        if has_s_need:
+            p_locations.append((row_idx, 'S_need_p'))
 
-        table_2_data.append({
-            'Subset': 'Divergent',
-            'Response Type': 'Need-aware',
-            'R_pref': divergent_df['need_aware_reward_mean'].mean(),
-            'S_need': divergent_df['need_s_need'].mean() if has_s_need else 'TBD',
-            'n': len(divergent_df)
-        })
-
-    # Non-divergent cases
     if len(non_divergent_df) > 0:
-        table_2_data.append({
-            'Subset': 'Non-divergent',
-            'Response Type': 'Preference-matched',
-            'R_pref': non_divergent_df['preference_reward_mean'].mean(),
-            'S_need': non_divergent_df['pref_s_need'].mean() if has_s_need else 'TBD',
-            'n': len(non_divergent_df)
-        })
+        pref_row, need_row, raw_ps = _build_table_2_rows(non_divergent_df, 'Non-divergent', has_s_need)
+        row_idx = len(table_2_data)
+        table_2_data.extend([pref_row, need_row])
+        all_raw_p.extend(raw_ps)
+        p_locations.append((row_idx, 'R_pref_p'))
+        if has_s_need:
+            p_locations.append((row_idx, 'S_need_p'))
 
-        table_2_data.append({
-            'Subset': 'Non-divergent',
-            'Response Type': 'Need-aware',
-            'R_pref': non_divergent_df['need_aware_reward_mean'].mean(),
-            'S_need': non_divergent_df['need_s_need'].mean() if has_s_need else 'TBD',
-            'n': len(non_divergent_df)
-        })
+    # Apply BH-FDR correction across all p-values in this table
+    adjusted_p = benjamini_hochberg(all_raw_p)
+    for i, (row_idx, col) in enumerate(p_locations):
+        table_2_data[row_idx][col] = adjusted_p[i]
 
     table_2_df = pd.DataFrame(table_2_data)
 
@@ -159,6 +278,12 @@ def generate_table_2(df):
 
     print(table_2_df.to_string(index=False))
 
+    print("\n--- Statistical Notes ---")
+    print("  p-values: Wilcoxon signed-rank test (paired, two-sided), BH-FDR corrected")
+    print("  CIs: 95% clustered bootstrap (10,000 resamples, clustered by person_id)")
+    print("  d: Cohen's d_z for paired effect size")
+    print("  p-values and d reported on the Preference-matched row for each subset")
+
     return table_2_df
 
 def generate_table_3(df):
@@ -166,30 +291,80 @@ def generate_table_3(df):
     Generate Table 3: Need-alignment gap by divergence type.
 
     ΔS_need = need_aware S_need - preference_matched S_need
+    With clustered bootstrap 95% CIs, Wilcoxon p-values (BH-corrected), and Cohen's d_z.
     """
     print("\n" + "="*80)
     print("Table 3: Need-Alignment Gap by Divergence Type")
     print("="*80)
 
-    # Check if S_need scores are available
     has_s_need = 'pref_s_need' in df.columns and 'need_s_need' in df.columns
 
     table_3_data = []
+    all_raw_p = []
+    # Track (row_index, column_name) for each raw p-value
+    p_locations = []
 
     for div_type in sorted(df['divergence_type'].unique()):
         subset = df[df['divergence_type'] == div_type]
+        clusters = subset['person_id'].values
 
-        delta_s_need = (subset['need_s_need'].mean() - subset['pref_s_need'].mean()) if has_s_need else 'TBD'
+        pref_rpref = subset['preference_reward_mean'].values
+        need_rpref = subset['need_aware_reward_mean'].values
+        delta_rpref = need_rpref - pref_rpref
 
-        table_3_data.append({
+        delta_rpref_ci = clustered_bootstrap_ci(delta_rpref, clusters)
+        delta_rpref_d = cohens_d_paired(need_rpref, pref_rpref)
+        _, rpref_p = wilcoxon(pref_rpref, need_rpref)
+
+        row_idx = len(table_3_data)
+        all_raw_p.append(rpref_p)
+        p_locations.append((row_idx, 'ΔR_pref_p'))
+
+        row = {
             'Divergence Type': div_type.replace('_', ' ').title(),
-            'ΔR_pref': subset['need_aware_reward_mean'].mean() - subset['preference_reward_mean'].mean(),
-            'ΔS_need': delta_s_need,
-            'n': len(subset)
-        })
+            'ΔR_pref': delta_rpref.mean(),
+            'ΔR_pref_CI': f"({delta_rpref_ci[0]:.4f}, {delta_rpref_ci[1]:.4f})",
+            'ΔR_pref_p': rpref_p,
+            'ΔR_pref_d': delta_rpref_d,
+            'n': len(subset),
+        }
+
+        if has_s_need:
+            pref_sneed = subset['pref_s_need'].values
+            need_sneed = subset['need_s_need'].values
+            delta_sneed = need_sneed - pref_sneed
+
+            delta_sneed_ci = clustered_bootstrap_ci(delta_sneed, clusters)
+            delta_sneed_d = cohens_d_paired(need_sneed, pref_sneed)
+            _, sneed_p = wilcoxon(pref_sneed, need_sneed)
+
+            all_raw_p.append(sneed_p)
+            p_locations.append((row_idx, 'ΔS_need_p'))
+
+            row['ΔS_need'] = delta_sneed.mean()
+            row['ΔS_need_CI'] = f"({delta_sneed_ci[0]:.4f}, {delta_sneed_ci[1]:.4f})"
+            row['ΔS_need_p'] = sneed_p
+            row['ΔS_need_d'] = delta_sneed_d
+        else:
+            row['ΔS_need'] = 'TBD'
+            row['ΔS_need_CI'] = ''
+            row['ΔS_need_p'] = ''
+            row['ΔS_need_d'] = ''
+
+        table_3_data.append(row)
+
+    # Apply BH-FDR correction across all p-values in this table
+    adjusted_p = benjamini_hochberg(all_raw_p)
+    for i, (row_idx, col) in enumerate(p_locations):
+        table_3_data[row_idx][col] = adjusted_p[i]
 
     table_3_df = pd.DataFrame(table_3_data)
     print(table_3_df.to_string(index=False))
+
+    print("\n--- Statistical Notes ---")
+    print("  p-values: Wilcoxon signed-rank test (paired, two-sided), BH-FDR corrected")
+    print("  CIs: 95% clustered bootstrap (10,000 resamples, clustered by person_id)")
+    print("  d: Cohen's d_z for paired effect size")
 
     return table_3_df
 
@@ -396,7 +571,39 @@ def main():
     table_2_df.to_csv(results_dir / "table_2.csv", index=False)
     table_3_df.to_csv(results_dir / "table_3.csv", index=False)
 
-    print(f"\nSaved CSV tables to: {results_dir}")
+    # Save statistical methods metadata
+    stats_meta = {
+        "column_definitions": {
+            "_p columns (R_pref_p, S_need_p, ΔR_pref_p, ΔS_need_p)": {
+                "test": "Wilcoxon signed-rank test (paired, two-sided)",
+                "correction": "Benjamini-Hochberg FDR correction applied across all p-values within each table"
+            },
+            "_d columns (R_pref_d, S_need_d, ΔR_pref_d, ΔS_need_d)": {
+                "test": "Cohen's d_z for paired data",
+                "formula": "mean(diff) / std(diff)"
+            },
+            "_CI columns (R_pref_CI, S_need_CI, ΔR_pref_CI, ΔS_need_CI)": {
+                "method": "Percentile bootstrap",
+                "n_resamples": 10000,
+                "confidence_level": 0.95,
+                "clustering": "Resampled at person_id level (clustered bootstrap)",
+                "seed": 42
+            }
+        },
+        "data": {
+            "n_total": len(df),
+            "n_divergent": len(df[df['divergence_type'] != 'none']),
+            "n_non_divergent": len(df[df['divergence_type'] == 'none']),
+            "divergence_types": df['divergence_type'].value_counts().to_dict(),
+            "n_unique_persons": int(df['person_id'].nunique())
+        }
+    }
+
+    with open(results_dir / "statistical_methods.json", 'w') as f:
+        json.dump(stats_meta, f, indent=2)
+    print(f"\nSaved statistical methods metadata to: {results_dir / 'statistical_methods.json'}")
+
+    print(f"Saved CSV tables to: {results_dir}")
 
     print("\n" + "="*80)
     print("Analysis complete!")

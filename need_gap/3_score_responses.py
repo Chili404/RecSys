@@ -28,7 +28,7 @@ class GPTNeoXRewardModel(GPTNeoXPreTrainedModel):
     config_class = GPTNeoXRewardModelConfig
 
     def __init__(self, config):
-        if type(config) == GPTNeoXConfig:
+        if isinstance(config, GPTNeoXConfig):
             config = GPTNeoXRewardModelConfig.from_dict(config.to_dict())
         super().__init__(config)
         self.gpt_neox = GPTNeoXModel(config)
@@ -139,11 +139,11 @@ def score_both_response_types(model_name, prompts, pref_responses, need_response
         )
 
         def score_batch(responses, desc):
-            formatted = [format_prompt_response(p, r, tokenizer) for p, r in zip(prompts, responses)]
+            formatted = [format_prompt_response(p, r, tokenizer) for p, r in zip(prompts, responses)]  # noqa: F821
             scores = []
             for i in tqdm(range(0, len(formatted), batch_size), desc=f"     {desc}"):
                 batch_texts = formatted[i:i+batch_size]
-                outputs = reward_pipe(batch_texts, **pipe_kwargs)
+                outputs = reward_pipe(batch_texts, **pipe_kwargs)  # noqa: F821
 
                 if isinstance(outputs[0], dict):
                     batch_scores = [o["score"] for o in outputs]
