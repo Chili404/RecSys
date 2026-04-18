@@ -23,3 +23,9 @@ uv.lock
 .tox/
 .coverage
 .pytest_cache/
+
+# --- Notebooks (run on remote GPU) ---
+need_gap/3_score_responses.ipynb
+
+# --- Data ---
+data/

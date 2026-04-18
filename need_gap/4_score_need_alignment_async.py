@@ -24,9 +24,9 @@ def load_config():
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
 
-def load_judge_prompt():
-    """Load the need-alignment judge prompt template"""
-    prompt_path = Path(__file__).parent / "prompts" / "need_alignment_judge.txt"
+def load_judge_prompt(config):
+    """Load the need-alignment judge prompt template from config path"""
+    prompt_path = Path(__file__).parent / config['prompt_path']
     with open(prompt_path, 'r') as f:
         return f.read()
 
@@ -125,7 +125,7 @@ async def score_need_alignment_async(config, max_concurrent=20):
     print(f"Max concurrent requests: {max_concurrent}")
 
     # Load judge prompt
-    judge_template = load_judge_prompt()
+    judge_template = load_judge_prompt(config)
 
     # Score preference-matched responses
     print("\n" + "="*80)
@@ -229,7 +229,7 @@ async def main():
     # Load environment variables from .env file
     load_dotenv()
 
-    config = load_config()
+    config = load_config()['step_4']['need_alignment_judge']
 
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:

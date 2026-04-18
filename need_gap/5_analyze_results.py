@@ -16,7 +16,7 @@ def validate_and_fix_reward_models(df):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    REWARD_MODELS = list(config['reward_models'].keys())
+    REWARD_MODELS = list(config['step_3']['reward_models'].keys())
 
     # Find valid models
     valid_models = []
@@ -52,7 +52,7 @@ def validate_and_fix_reward_models(df):
 
             for idx, row in df.iterrows():
                 # Get persona weights for valid models only
-                person_weight_full = row['person_weight'][:8]
+                person_weight_full = np.array(row['person_weight'])[:8]
                 valid_indices = [i for i, m in enumerate(REWARD_MODELS) if m in valid_models]
                 person_weight = person_weight_full[valid_indices]
 
@@ -78,21 +78,15 @@ def validate_and_fix_reward_models(df):
 def load_scored_responses():
     """Load scored responses DataFrame"""
     fully_scored_path = Path(__file__).parent / "data" / "fully_scored_responses.parquet"
-    scored_path = Path(__file__).parent / "data" / "scored_responses.parquet"
 
     if fully_scored_path.exists():
         df = pd.read_parquet(fully_scored_path)
         print(f"Loaded {len(df)} fully scored responses (with S_need)")
         df = validate_and_fix_reward_models(df)
         return df
-    elif scored_path.exists():
-        df = pd.read_parquet(scored_path)
-        print(f"Loaded {len(df)} scored responses (without S_need)")
-        df = validate_and_fix_reward_models(df)
-        return df
     else:
-        print("ERROR: No scored responses found")
-        print("Please run 3_score_responses.py first!")
+        print("ERROR: fully_scored_responses.parquet not found")
+        print("Please run 4_score_need_alignment_async.py first!")
         return None
 
 def generate_table_2(df):
@@ -368,6 +362,13 @@ def generate_statistics_summary(df):
         subset = df[df['divergence_type'] == div_type]
         mean_gap = subset['reward_gap'].mean()
         print(f"  {div_type}: {mean_gap:+.4f} (n={len(subset)})")
+
+    # Data source breakdown
+    if 'data_source' in df.columns:
+        print("\nData source distribution:")
+        print(df['data_source'].value_counts())
+        print("\nDivergence type by data source:")
+        print(df.groupby(['data_source', 'divergence_type']).size().unstack(fill_value=0))
 
 
 def main():

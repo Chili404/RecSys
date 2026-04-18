@@ -14,9 +14,9 @@ def load_config():
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
 
-def load_need_aware_prompt():
+def load_need_aware_prompt(config):
     """Load the need-aware generator prompt template"""
-    prompt_path = Path(__file__).parent / "prompts" / "need_aware_generator.txt"
+    prompt_path = Path(__file__).parent / config['need_aware_prompt']
     with open(prompt_path, 'r') as f:
         return f.read()
 
@@ -37,31 +37,22 @@ def get_user_context(row):
         return "\n\n".join(context_parts)
     return "No previous context available."
 
-async def generate_need_aware_response_async(client, prompt_text, context, template, model="gpt-4o", semaphore=None):
+async def generate_need_aware_response_async(client, prompt_text, context, template,
+                                             model, system_prompt, temperature, max_tokens,
+                                             semaphore=None):
     """Generate a need-aware response using GPT-4o asynchronously."""
     filled_prompt = template.replace("{prompt}", prompt_text).replace("{context}", context)
 
     try:
-        if semaphore:
-            async with semaphore:
-                response = await client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a need-aware assistant that responds to underlying user needs."},
-                        {"role": "user", "content": filled_prompt}
-                    ],
-                    temperature=0.7,
-                    max_tokens=1000
-                )
-        else:
+        async with semaphore:
             response = await client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a need-aware assistant that responds to underlying user needs."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": filled_prompt}
                 ],
-                temperature=0.7,
-                max_tokens=1000
+                temperature=temperature,
+                max_tokens=max_tokens
             )
 
         content = response.choices[0].message.content
@@ -85,8 +76,11 @@ async def generate_need_aware_response_async(client, prompt_text, context, templ
             "full_output": ""
         }
 
-async def generate_responses_async(config, max_concurrent=20):
+async def generate_responses_async(config):
     """Generate preference-matched and need-aware responses asynchronously"""
+    gen_config = config['generation']
+    max_concurrent = gen_config['max_concurrent']
+
     # Initialize OpenAI async client
     api_key = os.environ.get("OPENAI_API_KEY")
     client = AsyncOpenAI(api_key=api_key)
@@ -95,25 +89,34 @@ async def generate_responses_async(config, max_concurrent=20):
     semaphore = asyncio.Semaphore(max_concurrent)
 
     # Load filtered prompts
-    filtered_path = Path(__file__).parent / "data" / "filtered_prompts.parquet"
+    filtered_path = Path(__file__).parent / config['input_file']
     if not filtered_path.exists():
         print(f"ERROR: Filtered prompts not found at {filtered_path}")
-        print("Please run 1_filter_prompts.py first!")
+        print("Please run 1_filter_prompts_async.py first!")
         return None
 
     filtered_df = pd.read_parquet(filtered_path)
     print(f"Loaded {len(filtered_df)} filtered prompts")
 
-    # Load PersonalLLM datasets to get best_response
-    data_dir = Path(__file__).parent.parent.parent / "PersonalLLM" / "PersonalLLM" / "data"
-    print("Loading PersonalLLM_Eval dataset (matching filter script)...")
-    # Use eval dataset (derived from test split) to match 1_filter_prompts_async.py
-    combined_df = pd.read_parquet(data_dir / "personal_llm_eval.parquet")
+    # Load PersonalLLM dataset from Hugging Face to get best_response
+    from datasets import load_dataset
+
+    hf_repo = config['personalllm_hf_repo']
+    random_seed = config['random_seed']
+
+    print(f"Loading PersonalLLM_Eval dataset from {hf_repo}...")
+    combined_df = load_dataset(hf_repo, split='train').to_pandas()
     # IMPORTANT: Must shuffle the same way as 1_filter_prompts_async.py to align indices
-    combined_df = combined_df.sample(frac=1, random_state=42).reset_index(drop=True)
+    combined_df = combined_df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
 
     # Load need-aware template
-    need_aware_template = load_need_aware_prompt()
+    need_aware_template = load_need_aware_prompt(config)
+
+    # Generation parameters
+    model = gen_config['model']
+    system_prompt = gen_config['system_prompt']
+    temperature = gen_config['temperature']
+    max_tokens = gen_config['max_tokens']
 
     print("\nGenerating need-aware responses asynchronously...")
     print(f"Max concurrent requests: {max_concurrent}")
@@ -128,7 +131,10 @@ async def generate_responses_async(config, max_concurrent=20):
 
         # Create async task
         task = generate_need_aware_response_async(
-            client, prompt_text, context, need_aware_template, semaphore=semaphore
+            client, prompt_text, context, need_aware_template,
+            model=model, system_prompt=system_prompt,
+            temperature=temperature, max_tokens=max_tokens,
+            semaphore=semaphore
         )
         tasks.append(task)
         rows_data.append((idx, row, prompt_text))
@@ -141,13 +147,19 @@ async def generate_responses_async(config, max_concurrent=20):
 
     for (idx, row, prompt_text), need_aware_result in zip(rows_data, results):
         prompt_idx = row['prompt_idx']
+        data_source = row.get('data_source', 'personalllm')
 
-        # Get preference-matched response from PersonalLLM data
-        # Use .loc[] to access by index value, not .iloc[] for position
-        original_row = combined_df.loc[prompt_idx]
-        preference_matched_response = original_row['best_response']
-        preference_matched_model = original_row.get('best_response_model', 'unknown')
-        preference_matched_reward = original_row.get('best_response_reward', 0.0)
+        if data_source == 'wildchat':
+            # WildChat: use the original ChatGPT response as preference-matched
+            preference_matched_response = row['external_preference_response']
+            preference_matched_model = 'wildchat_original'
+            preference_matched_reward = 0.0
+        else:
+            # PersonalLLM: look up best_response from PersonalLLM DataFrame
+            original_row = combined_df.loc[prompt_idx]
+            preference_matched_response = original_row['best_response']
+            preference_matched_model = original_row.get('best_response_model', 'unknown')
+            preference_matched_reward = original_row.get('best_response_reward', 0.0)
 
         # Store results
         all_results.append({
@@ -159,6 +171,7 @@ async def generate_responses_async(config, max_concurrent=20):
             'confidence': row['confidence'],
             'reasoning': row['reasoning'],
             'target_domains': row['target_domains'],
+            'data_source': data_source,
 
             # Preference-matched response
             'preference_matched_response': preference_matched_response,
@@ -185,7 +198,7 @@ async def generate_responses_async(config, max_concurrent=20):
     print(results_df['divergence_type'].value_counts())
 
     # Save to file
-    output_path = Path(__file__).parent / "data" / "generated_responses.parquet"
+    output_path = Path(__file__).parent / config['output_file']
     results_df.to_parquet(output_path, index=False)
     print(f"\nSaved to: {output_path}")
 
@@ -226,7 +239,7 @@ async def main():
     # Load environment variables from .env file
     load_dotenv()
 
-    config = load_config()
+    config = load_config()['step_2']
 
     # Check for OpenAI API key
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -234,7 +247,7 @@ async def main():
         print("ERROR: OPENAI_API_KEY environment variable not set!")
         exit(1)
 
-    _ = await generate_responses_async(config, max_concurrent=20)
+    _ = await generate_responses_async(config)
 
 if __name__ == "__main__":
     asyncio.run(main())
