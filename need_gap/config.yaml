@@ -49,6 +49,15 @@ step_1:
       max_scan_limit: 200000
       progress_interval: 50000
       default_person_weight: [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125]
+    aita:
+      enabled: true
+      excel_path: "../bench/NeedGap-Bench.xlsx"
+      sheet_core: "AITA-YTA"
+      sheet_full: "AITA-YTA_full_results"
+      max_samples: 400
+      divergence_type: "sycophantic_affirmation"
+      preference_model: "GPT-4o"
+      default_person_weight: [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125]
 
 # ═══════════════════════════════════════════════════════════════════
 # Step 2 — Generate responses (2_generate_responses_async.py)

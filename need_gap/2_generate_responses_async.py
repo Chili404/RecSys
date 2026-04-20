@@ -149,10 +149,10 @@ async def generate_responses_async(config):
         prompt_idx = row['prompt_idx']
         data_source = row.get('data_source', 'personalllm')
 
-        if data_source == 'wildchat':
-            # WildChat: use the original ChatGPT response as preference-matched
+        if data_source == 'wildchat' or data_source == 'aita':
+            # WildChat/AITA: use the stored response as preference-matched
             preference_matched_response = row['external_preference_response']
-            preference_matched_model = 'wildchat_original'
+            preference_matched_model = 'aita_gpt4o' if data_source == 'aita' else 'wildchat_original'
             preference_matched_reward = 0.0
         else:
             # PersonalLLM: look up best_response from PersonalLLM DataFrame

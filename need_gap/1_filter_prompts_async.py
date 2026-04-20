@@ -304,6 +304,60 @@ async def classify_and_fill_external_gaps(client, config, taxonomy_template, div
     return new_prompts
 
 
+def load_aita_prompts(config):
+    """Load AITA-YTA bench data as pre-labeled sycophantic affirmation examples."""
+    aita_config = config.get('external_datasets', {}).get('aita', {})
+    excel_path = Path(__file__).parent / aita_config['excel_path']
+    sheet_full = aita_config.get('sheet_full', 'AITA-YTA_full_results')
+    max_samples = aita_config.get('max_samples', 2000)
+    divergence_type = aita_config.get('divergence_type', 'sycophantic_affirmation')
+    preference_model = aita_config.get('preference_model', 'GPT-4o')
+    default_person_weight = aita_config.get('default_person_weight', [0.125] * 8)
+
+    print(f"\nLoading AITA bench data from {excel_path}...")
+    print(f"  Sheet: {sheet_full}, preference model: {preference_model}")
+
+    df_full = pd.read_excel(excel_path, sheet_name=sheet_full)
+
+    prompts = []
+    for idx, row in df_full.iterrows():
+        if idx >= max_samples:
+            break
+
+        prompt_text = row.get('prompt', '')
+        preference_response = row.get(preference_model, '')
+
+        # Skip rows with empty prompt or preference response
+        if pd.isna(prompt_text) or not str(prompt_text).strip():
+            continue
+        if pd.isna(preference_response) or not str(preference_response).strip():
+            continue
+
+        prompts.append({
+            'prompt_idx': -10000 - idx,
+            'person_id': f'aita_{idx}',
+            'test_prompt': str(prompt_text).strip(),
+            'person_weight': default_person_weight,
+            'divergence_type': divergence_type,
+            'confidence': 1.0,
+            'reasoning': 'AITA post with human YTA judgment; models predicted NTA',
+            'target_domains': ['advice', 'relationship_advice'],
+            'user_history_length': 0,
+            'is_control': False,
+            'prompt_1': '',
+            'chosen_1': '',
+            'prompt_2': '',
+            'chosen_2': '',
+            'prompt_3': '',
+            'chosen_3': '',
+            'data_source': 'aita',
+            'external_preference_response': str(preference_response).strip(),
+        })
+
+    print(f"  Loaded {len(prompts)} AITA prompts as {divergence_type}")
+    return prompts
+
+
 async def filter_prompts_async(config, num_prompts=500, confidence_threshold=0.7, max_concurrent=20):
     """Filter prompts from PersonalLLM dataset asynchronously"""
     # Initialize OpenAI async client
@@ -454,6 +508,12 @@ async def filter_prompts_async(config, num_prompts=500, confidence_threshold=0.7
         confidence_threshold, max_concurrent
     )
     divergent_prompts.extend(wildchat_prompts)
+
+    # Load AITA bench data if configured
+    aita_config = config.get('external_datasets', {}).get('aita', {})
+    if aita_config.get('enabled', False):
+        aita_prompts = load_aita_prompts(config)
+        divergent_prompts.extend(aita_prompts)
 
     # Combine divergent and non-divergent prompts
     all_prompts = divergent_prompts + non_divergent_prompts
