@@ -501,6 +501,64 @@ def generate_top_discrepancies(df, top_n_per_category=3):
 
     return examples
 
+def generate_judge_validation_summary():
+    """
+    Load and display judge validation results from step 4.5.
+
+    Returns the validation dict, or None if results not found.
+    """
+    validation_path = Path(__file__).parent / "results" / "judge_validation.json"
+    if not validation_path.exists():
+        print("\n[Judge validation not yet run — skipping. Run 4.5_validate_judge.py first.]")
+        return None
+
+    with open(validation_path, 'r') as f:
+        val = json.load(f)
+
+    print("\n" + "="*80)
+    print("S_need Judge Validation (Human Ground Truth Calibration)")
+    print("="*80)
+
+    t1 = val["tier_1_aita_yta_sycophancy"]
+    t2 = val["tier_2_ideal_response"]
+    summary = val["summary"]
+
+    # Tier 1
+    print(f"\n--- Tier 1: AITA-YTA Sycophancy Detection (n={t1['n_valid']}) ---")
+    print(f"  Human label: {t1['human_label_semantics']}")
+    print(f"  Label distribution: {t1['human_label_distribution']}")
+    print(f"\n  ROC-AUC (appropriate_redirection): {t1['roc_auc_appropriate_redirection']:.4f}")
+    print(f"  ROC-AUC (s_need):                  {t1['roc_auc_s_need']:.4f}")
+    print(f"  Point-biserial r (s_need):          {t1['point_biserial_s_need']['r']:.4f} "
+          f"(p={t1['point_biserial_s_need']['p']:.2e})")
+
+    # Bucketed agreement
+    buckets = t1["bucketed_agreement"]
+    print(f"\n  Bucketed agreement (judge redirection tertiles -> human challenge rate):")
+    for bucket_name, bucket_data in buckets.items():
+        print(f"    {bucket_name}: {bucket_data['human_challenges_rate']:.1%} "
+              f"(n={bucket_data['n']})")
+
+    # Tier 2
+    print(f"\n--- Tier 2: Ideal Response Recognition (n={t2['n_valid']}) ---")
+    print(f"  Mean S_need for ideal responses: {t2['mean_s_need']:.4f} (std={t2['std_s_need']:.4f})")
+    print(f"  Quality check: {t2['ideal_response_quality_check']}")
+
+    # Overall verdict
+    print(f"\n--- Validation Verdict ---")
+    if summary["judge_discriminates_sycophancy"]:
+        print(f"  [PASS] Judge discriminates sycophancy (AUC={summary['tier_1_auc_sneed']:.3f} > 0.5)")
+    else:
+        print(f"  [WARN] Judge does not discriminate sycophancy (AUC={summary['tier_1_auc_sneed']:.3f})")
+
+    if summary["judge_recognizes_ideal_responses"]:
+        print(f"  [PASS] Judge recognizes ideal responses (mean S_need={summary['tier_2_mean_s_need']:.3f} > 0.7)")
+    else:
+        print(f"  [WARN] Judge does not recognize ideal responses (mean S_need={summary['tier_2_mean_s_need']:.3f})")
+
+    return val
+
+
 def generate_statistics_summary(df):
     """Generate overall statistics summary"""
     print("\n" + "="*80)
@@ -564,6 +622,9 @@ def main():
     # Get top 3 cases per divergence type
     generate_top_discrepancies(df, top_n_per_category=3)
 
+    # Judge validation summary (from step 4.5)
+    validation = generate_judge_validation_summary()
+
     # Save tables
     results_dir = Path(__file__).parent / "results"
     results_dir.mkdir(exist_ok=True)
@@ -599,6 +660,26 @@ def main():
         }
     }
 
+    # Include judge validation summary if available
+    if validation is not None:
+        stats_meta["judge_validation"] = {
+            "tier_1_aita_yta": {
+                "n": validation["tier_1_aita_yta_sycophancy"]["n_valid"],
+                "roc_auc_s_need": validation["tier_1_aita_yta_sycophancy"]["roc_auc_s_need"],
+                "roc_auc_appropriate_redirection": validation["tier_1_aita_yta_sycophancy"]["roc_auc_appropriate_redirection"],
+                "point_biserial_s_need": validation["tier_1_aita_yta_sycophancy"]["point_biserial_s_need"],
+            },
+            "tier_2_ideal_response": {
+                "n": validation["tier_2_ideal_response"]["n_valid"],
+                "mean_s_need": validation["tier_2_ideal_response"]["mean_s_need"],
+                "quality_check": validation["tier_2_ideal_response"]["ideal_response_quality_check"],
+            },
+            "verdict": {
+                "judge_discriminates_sycophancy": validation["summary"]["judge_discriminates_sycophancy"],
+                "judge_recognizes_ideal_responses": validation["summary"]["judge_recognizes_ideal_responses"],
+            }
+        }
+
     with open(results_dir / "statistical_methods.json", 'w') as f:
         json.dump(stats_meta, f, indent=2)
     print(f"\nSaved statistical methods metadata to: {results_dir / 'statistical_methods.json'}")
@@ -608,8 +689,6 @@ def main():
     print("\n" + "="*80)
     print("Analysis complete!")
     print("="*80)
-    print("\nNOTE: S_need scores are marked as 'TBD' until the need-alignment judge is implemented.")
-    print("Once you have the judge, run this script again to populate those fields.")
 
 if __name__ == "__main__":
     main()

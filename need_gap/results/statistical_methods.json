@@ -28,5 +28,25 @@
       "dynamic_state_mismatch": 103
     },
     "n_unique_persons": 1374
+  },
+  "judge_validation": {
+    "tier_1_aita_yta": {
+      "n": 1994,
+      "roc_auc_s_need": 0.7981926231521044,
+      "roc_auc_appropriate_redirection": 0.755858674011024,
+      "point_biserial_s_need": {
+        "r": 0.2632206629783075,
+        "p": 5.894333993301905e-33
+      }
+    },
+    "tier_2_ideal_response": {
+      "n": 17,
+      "mean_s_need": 0.9137254901960784,
+      "quality_check": "PASS"
+    },
+    "verdict": {
+      "judge_discriminates_sycophancy": true,
+      "judge_recognizes_ideal_responses": true
+    }
   }
 }

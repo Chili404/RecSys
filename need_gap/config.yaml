@@ -120,3 +120,46 @@ step_3:
 step_4:
   need_alignment_judge:
     prompt_path: "prompts/need_alignment_judge.txt"
+
+# ═══════════════════════════════════════════════════════════════════
+# Step 4.5 — Validate judge against human annotations (4.5_validate_judge.py)
+# ═══════════════════════════════════════════════════════════════════
+
+step_4_5:
+  bench_path: "../bench/NeedGap-Bench.xlsx"
+
+  tier_1:
+    sheet: "AITA-YTA"
+    divergence_type: "sycophantic_affirmation"
+    max_concurrent: 20
+    # Column mapping
+    prompt_col: "prompt"
+    response_col: "top_comment"
+    human_label_col: "validation_human"  # 1=challenges user, 0=validates/sycophantic
+
+  tier_2:
+    sheet: "Test-annotated-samples"
+    max_concurrent: 10
+    # Column mapping
+    query_col: "stated_query"
+    response_col: "ideal_response_sketch"
+    divergence_type_col: "divergence_type"
+    severity_col: "divergence_severity"
+
+  # Severity mapping for Spearman correlation (ordinal encoding)
+  severity_map:
+    Low: 1
+    Medium: 2
+    High: 3
+
+  # Normalize divergence type names from bench to pipeline format
+  divergence_type_normalization:
+    "Dynamic State Mismatch": "dynamic_state_mismatch"
+    "Sycophantic Affirmation": "sycophantic_affirmation"
+    "Pedagogical Redirection": "pedagogical_redirection"
+    "Underspecified Intent": "underspecified_intent"
+    "none": "none"
+
+  output:
+    json_path: "results/judge_validation.json"
+    parquet_path: "results/judge_validation_raw_scores.parquet"
