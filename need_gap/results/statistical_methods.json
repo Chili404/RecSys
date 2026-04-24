@@ -17,17 +17,17 @@
     }
   },
   "data": {
-    "n_total": 1374,
-    "n_divergent": 894,
-    "n_non_divergent": 480,
+    "n_total": 1784,
+    "n_divergent": 1297,
+    "n_non_divergent": 487,
     "divergence_types": {
-      "none": 480,
-      "underspecified_intent": 413,
+      "sycophantic_affirmation": 528,
+      "none": 487,
+      "underspecified_intent": 411,
       "pedagogical_redirection": 250,
-      "sycophantic_affirmation": 128,
-      "dynamic_state_mismatch": 103
+      "dynamic_state_mismatch": 108
     },
-    "n_unique_persons": 1374
+    "n_unique_persons": 1784
   },
   "judge_validation": {
     "tier_1_aita_yta": {

@@ -105,7 +105,7 @@ async def generate_responses_async(config):
     random_seed = config['random_seed']
 
     print(f"Loading PersonalLLM_Eval dataset from {hf_repo}...")
-    combined_df = load_dataset(hf_repo, split='train').to_pandas()
+    combined_df = load_dataset(hf_repo, split='test').to_pandas()
     # IMPORTANT: Must shuffle the same way as 1_filter_prompts_async.py to align indices
     combined_df = combined_df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
 

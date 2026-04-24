@@ -1,0 +1,240 @@
+{
+  "multi_judge_agreement": {
+    "pooled": {
+      "n_pairs": 5352,
+      "spearman_rho": 0.6656966679060164,
+      "spearman_p": 0.0,
+      "pearson_r": 0.6534326583795355,
+      "pearson_p": 0.0,
+      "mean_abs_diff": 0.09830592924763328,
+      "std_abs_diff": 0.14101720791381095,
+      "cohens_kappa_threshold_median": 0.5355949194154709,
+      "cohens_kappa_threshold_0.8": 0.5305039272448526,
+      "median_threshold_value": 1.0
+    },
+    "pref": {
+      "n": 1784,
+      "gpt4o_mean": 0.8789611360239162,
+      "mini_mean": 0.839050822122571,
+      "spearman_rho": 0.6241398949050332,
+      "spearman_p": 3.123305071213215e-193,
+      "pearson_r": 0.6764911195068936,
+      "pearson_p": 4.965987713730143e-239,
+      "mean_abs_diff": 0.1031390134529148
+    },
+    "need": {
+      "n": 1784,
+      "gpt4o_mean": 0.9781763826606875,
+      "mini_mean": 0.9282511210762332,
+      "spearman_rho": 0.34058007831728304,
+      "spearman_p": 1.0804856014872293e-49,
+      "pearson_r": 0.31756004048735154,
+      "pearson_p": 4.358315125962726e-43,
+      "mean_abs_diff": 0.06434977578475336
+    },
+    "literal": {
+      "n": 1784,
+      "gpt4o_mean": 0.8226083707025411,
+      "mini_mean": 0.7485426008968611,
+      "spearman_rho": 0.6831627596186632,
+      "spearman_p": 1.4623942576842965e-245,
+      "pearson_r": 0.5911349336013014,
+      "pearson_p": 1.390011785636905e-168,
+      "mean_abs_diff": 0.1274289985052317
+    },
+    "per_criterion": {
+      "need_fulfillment": {
+        "n": 5352,
+        "spearman_rho": 0.631533544735991,
+        "spearman_p": 0.0
+      },
+      "expert_approval": {
+        "n": 5352,
+        "spearman_rho": 0.5646351410181356,
+        "spearman_p": 0.0
+      },
+      "appropriate_redirection": {
+        "n": 5352,
+        "spearman_rho": 0.5792671429111341,
+        "spearman_p": 0.0
+      }
+    },
+    "gap_reproduction": {
+      "divergent": {
+        "n": 1297,
+        "gpt4o_gap_mean": 0.1389360061680802,
+        "gpt4o_gap_ci": [
+          0.1272153687997944,
+          0.15014263685427912
+        ],
+        "mini_gap_mean": 0.1388332048316628,
+        "mini_gap_ci": [
+          0.1265484451297867,
+          0.15147776921099976
+        ],
+        "gap_spearman_rho": 0.4940300016136906,
+        "gap_spearman_p": 9.319268480574248e-81
+      },
+      "control": {
+        "n": 487,
+        "gpt4o_gap_mean": -0.006570841889117042,
+        "gpt4o_gap_ci": [
+          -0.014099931553730323,
+          0.0012320328542094459
+        ],
+        "mini_gap_mean": -0.04298425735797398,
+        "mini_gap_ci": [
+          -0.05106091718001368,
+          -0.03490759753593429
+        ],
+        "gap_spearman_rho": 0.15417434185083562,
+        "gap_spearman_p": 0.0006401151855802347
+      }
+    }
+  },
+  "reversed_control": {
+    "literal_vs_pref_overall": {
+      "n": 1784,
+      "literal_mean": 0.8226083707025411,
+      "literal_ci": [
+        0.8129671150971599,
+        0.8320627802690583
+      ],
+      "pref_mean": 0.8789611360239162,
+      "pref_ci": [
+        0.8692442077727952,
+        0.8882296337817639
+      ],
+      "mean_diff": -0.0563527653213752,
+      "diff_ci": [
+        -0.06689088191330345,
+        -0.045777279521674145
+      ],
+      "wilcoxon_p_raw": 3.7644670028873295e-44,
+      "cohens_d": -0.24681301957342108,
+      "wilcoxon_p_bh": 5.646700504330995e-44
+    },
+    "literal_vs_need_overall": {
+      "n": 1784,
+      "literal_mean": 0.8226083707025411,
+      "need_mean": 0.9781763826606875,
+      "mean_diff": -0.1555680119581465,
+      "diff_ci": [
+        -0.16517189835575483,
+        -0.1460762331838565
+      ],
+      "wilcoxon_p_raw": 1.6520878924101312e-157,
+      "cohens_d": -0.7521275927788965,
+      "wilcoxon_p_bh": 4.956263677230394e-157
+    },
+    "divergent": {
+      "n": 1297,
+      "literal_mean": 0.7582626574145465,
+      "literal_ci": [
+        0.7472115137496788,
+        0.7693150860961192
+      ],
+      "pref_mean": 0.8350038550501157,
+      "pref_ci": [
+        0.8231817013621175,
+        0.8472372140837832
+      ],
+      "need_mean": 0.9739398612181959,
+      "need_ci": [
+        0.9705988177846313,
+        0.9772295039835518
+      ],
+      "literal_vs_pref": {
+        "mean_diff": -0.07674119763556926,
+        "diff_ci": [
+          -0.09103058339758417,
+          -0.06255461320997173
+        ],
+        "wilcoxon_p_raw": 3.0545468880504745e-44,
+        "cohens_d": -0.2945988959596768,
+        "wilcoxon_p_bh": 5.646700504330995e-44
+      },
+      "literal_vs_need": {
+        "mean_diff": -0.21567720380364946,
+        "diff_ci": [
+          -0.2270367514777692,
+          -0.20447185813415575
+        ],
+        "wilcoxon_p_raw": 2.6933221906168677e-165,
+        "cohens_d": -1.041300005619008,
+        "wilcoxon_p_bh": 1.6159933143701207e-164
+      }
+    },
+    "control": {
+      "n": 487,
+      "literal_mean": 0.9939767282683094,
+      "literal_ci": [
+        0.9886379192334018,
+        0.9983572895277208
+      ],
+      "pref_mean": 0.9960301163586586,
+      "pref_ci": [
+        0.9904175222450378,
+        0.9998631074606434
+      ],
+      "need_mean": 0.9894592744695414,
+      "need_ci": [
+        0.9832991101984943,
+        0.9946611909650923
+      ],
+      "literal_vs_pref": {
+        "mean_diff": -0.0020533880903490756,
+        "diff_ci": [
+          -0.008898015058179328,
+          0.005065023956194388
+        ],
+        "wilcoxon_p_raw": 0.5627383009168354,
+        "cohens_d": -0.026093942149067923,
+        "wilcoxon_p_bh": 0.5627383009168354
+      },
+      "literal_vs_need": {
+        "mean_diff": 0.004517453798767968,
+        "diff_ci": [
+          -0.003011635865845311,
+          0.011909650924024642
+        ],
+        "wilcoxon_p_raw": 0.22868262482242496,
+        "cohens_d": 0.0531772718301986,
+        "wilcoxon_p_bh": 0.27441914978690995
+      }
+    }
+  },
+  "summary": {
+    "multi_judge_spearman_rho": 0.6656966679060164,
+    "multi_judge_agreement_strong": false,
+    "multi_judge_agreement_moderate": true,
+    "mini_reproduces_divergent_gap": true,
+    "divergent_gap_gpt4o": 0.1389360061680802,
+    "divergent_gap_mini": 0.1388332048316628,
+    "control_gap_gpt4o": -0.006570841889117042,
+    "control_gap_mini": -0.04298425735797398,
+    "literal_similar_to_pref": true,
+    "literal_different_from_need": true,
+    "content_sensitive_not_origin_sensitive": true,
+    "literal_vs_pref_d_divergent": -0.2945988959596768,
+    "literal_vs_need_d_divergent": -1.041300005619008
+  },
+  "statistical_notes": {
+    "judge_agreement": "Spearman/Pearson correlations between GPT-4o and GPT-4o-mini S_need scores",
+    "cohens_kappa": "Binary agreement at median and 0.8 thresholds",
+    "reversed_control_p": "Wilcoxon signed-rank paired tests, BH-FDR corrected",
+    "reversed_control_d": "Cohen's d_z for paired effect size",
+    "cis": "95% clustered bootstrap (10,000 resamples, clustered by person_id)",
+    "scoring_matrix": {
+      "response_types": [
+        "preference_matched",
+        "need_aware",
+        "literal"
+      ],
+      "judges": [
+        "gpt-4o",
+        "gpt-4o-mini"
+      ]
+    }
+  }
+}

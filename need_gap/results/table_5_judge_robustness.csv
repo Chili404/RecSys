@@ -1,0 +1,10 @@
+Experiment,Comparison,GPT-4o Mean,GPT-4o-mini Mean,Spearman rho,MAD,Cohen's d,p (BH)
+Multi-Judge Agreement,Preference-matched (GPT-4o vs Mini),0.879,0.8391,0.6241,0.1031,,
+Multi-Judge Agreement,Need-aware (GPT-4o vs Mini),0.9782,0.9283,0.3406,0.0643,,
+Multi-Judge Agreement,Literal (GPT-4o vs Mini),0.8226,0.7485,0.6832,0.1274,,
+Gap Reproduction,Divergent S_need gap,0.1389,0.1388,0.494,,,
+Gap Reproduction,Control S_need gap,-0.0066,-0.043,0.1542,,,
+Reversed Control,Divergent: Literal vs Pref,0.7583 vs 0.8350,,,,-0.2946,0.0
+Reversed Control,Divergent: Literal vs Need,0.7583 vs 0.9739,,,,-1.0413,0.0
+Reversed Control,Control: Literal vs Pref,0.9940 vs 0.9960,,,,-0.0261,0.5627
+Reversed Control,Control: Literal vs Need,0.9940 vs 0.9895,,,,0.0532,0.2744

@@ -374,7 +374,7 @@ async def filter_prompts_async(config, num_prompts=500, confidence_threshold=0.7
     random_seed = config['experiment'].get('random_seed', 42)
 
     print(f"Loading PersonalLLM_Eval dataset from {hf_repo}...")
-    combined_df = load_dataset(hf_repo, split='train').to_pandas()
+    combined_df = load_dataset(hf_repo, split='test').to_pandas()
     combined_df = combined_df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
 
     print(f"Total prompts available: {len(combined_df)}")

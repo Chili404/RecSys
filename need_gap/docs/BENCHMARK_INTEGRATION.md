@@ -81,7 +81,7 @@
 - Proves the need gap is a systemic property of preference optimization
 
 **Implementation:**
-- New script: `7_cross_model_analysis.py`
+- New script: `6_cross_model_analysis.py`
 - Load all 12 model responses from bench
 - Score with reward models (Step 3 logic) and need-alignment judge (Step 4 logic)
 - Generate Table 4 with per-model comparison
@@ -194,7 +194,7 @@ bench:
 |--------|-----------|----------|
 | `6_validate_classifier.py` | bench xlsx, taxonomy_classifier.txt | `results/classifier_evaluation.json` |
 | `6b_validate_taxonomy.py` | bench xlsx (wildchat sheet) | `results/taxonomy_signal_validation.json` |
-| `7_cross_model_analysis.py` | bench xlsx (AITA full), reward models | `results/table_4_cross_model.csv` |
+| `6_cross_model_analysis.py` | bench xlsx (AITA full), reward models | `results/table_4_cross_model.csv` |
 | `3b_score_bench_metrics.py` | generated_responses.parquet | Extended scoring with validation/indirectness/framing |
 
 ---

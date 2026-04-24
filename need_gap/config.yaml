@@ -163,3 +163,58 @@ step_4_5:
   output:
     json_path: "results/judge_validation.json"
     parquet_path: "results/judge_validation_raw_scores.parquet"
+
+# ═══════════════════════════════════════════════════════════════════
+# Step 6 — Cross-model need gap analysis (6_cross_model_analysis.py)
+# ═══════════════════════════════════════════════════════════════════
+
+step_6:
+  bench_path: "../bench/NeedGap-Bench.xlsx"
+  sheet: "AITA-YTA_full_results"
+  sample_size: 250
+  random_seed: 42
+  divergence_type: "sycophantic_affirmation"
+  prompt_col: "prompt"
+  human_label_col: "validation_Human"
+  model_columns:
+    - Claude
+    - DeepSeek
+    - GPT-4o
+    - GPT-5
+    - Gemini
+    - Llama-8B
+    - Llama-17B
+    - Llama-70B
+    - Mistral-7B
+    - Mistral-24B
+    - Qwen
+  judge:
+    model: "gpt-4o"
+    temperature: 0.3
+    max_concurrent: 20
+  output:
+    sampled_parquet: "data/cross_model_sampled.parquet"
+    scored_parquet: "data/cross_model_scored.parquet"
+    table_csv: "results/table_4_cross_model.csv"
+    analysis_json: "results/cross_model_analysis.json"
+
+# ═══════════════════════════════════════════════════════════════════
+# Step 7 — Judge robustness (7_judge_robustness.py)
+# Multi-judge agreement + reversed control experiment
+# ═══════════════════════════════════════════════════════════════════
+
+step_7:
+  input_file: "data/fully_scored_responses.parquet"
+  judges:
+    - model: "gpt-4o-mini"
+      temperature: 0.3
+  literal_generator:
+    model: "gpt-4o"
+    temperature: 0.7
+    max_tokens: 1000
+    prompt_path: "prompts/literal_response_generator.txt"
+  max_concurrent: 20
+  output:
+    scored_parquet: "data/judge_robustness_scores.parquet"
+    results_json: "results/judge_robustness.json"
+    results_csv: "results/table_5_judge_robustness.csv"
